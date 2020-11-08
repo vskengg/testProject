@@ -29,7 +29,7 @@ public class CQConnectTestTA {
 	public static void main(String[] args)
 			throws ParseException, IOException, PathNotFoundException, RepositoryException {
 
-		Session session = getSession("http://localhost:4505/crx/server", "admin", "admin".toCharArray());
+		Session session = getSession("http://localhost:4502/crx/server", "admin", "admin".toCharArray());
 		// findComponents(session);
 		String contentComponentsLocation = "/apps/adc/fds/components/content";
 		String atomComponentsLocation = contentComponentsLocation + "/atoms";
