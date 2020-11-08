@@ -1,5 +1,7 @@
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -29,29 +31,130 @@ import org.json.simple.parser.JSONParser;
 
 public class CQConnectTestTACompGen {
 
+	public static ArrayList<String> propsArray = new ArrayList<String>();
+	public static String componentName = "indicators";
+
 	public static void main(String[] args) throws ParseException, IOException, PathNotFoundException,
 			RepositoryException, org.json.simple.parser.ParseException {
 		try {
-			String compName = "indicators";
+
 			Session session = getSession("http://192.168.0.5:4502/crx/server", "admin", "admin".toCharArray());
 			Node atomsNode = session.getNode("/apps/abbott-platform/components/autoComponents/atoms");
 			Node compNode;
-			if (atomsNode.hasNode(compName)) {
-				atomsNode.getNode(compName).remove();
+			if (atomsNode.hasNode(componentName)) {
+				atomsNode.getNode(componentName).remove();
 				session.save();
-				compNode = atomsNode.addNode(compName, "sling:Folder").addNode("v1", "nt:unstructured")
-						.addNode(compName, "cq:Component");
+				compNode = atomsNode.addNode(componentName, "sling:Folder").addNode("v1", "nt:unstructured")
+						.addNode(componentName, "cq:Component");
 				session.save();
+				setValues("jcr:title", compNode, getComponentTitle());
 				setValues("componentGroup", compNode, "Abbott Globals - Content");
 				Node tempNode = createNode("cq:dialog", compNode);
-				setValues("jcr:title", tempNode, compName);
+				setValues("jcr:title", tempNode, getComponentTitle());
 				setValues("sling:resourceType", tempNode, "cq/gui/components/authoring/dialog");
 				createDialogNode(tempNode);
+				createImplClass();
+				createImplTestClass();
 				session.save();
 			}
 		} catch (Exception e) {
 			System.err.println("Exception is : " + e);
 		}
+	}
+
+	private static void createImplTestClass() {
+		BufferedReader br = null;
+		String valGenString = " 	@ValueMapValue\r\n	@Setter(AccessLevel.NONE)\r\n	private String ";
+		String semiColonStr = "; \r\n\n";
+		String interfaceClass = getComponentTitle();
+		String newClass = interfaceClass + "ImplTest.java";
+		String valGenerator = "";
+		for (int i = 0; i < propsArray.size(); i++) {
+			valGenerator = valGenerator + valGenString + propsArray.get(i) + semiColonStr;
+		}
+		try {
+			String sCurrentLine;
+			br = new BufferedReader(
+					new FileReader("C:\\Users\\Santosh\\Desktop\\compGen\\javaAuto\\ipFiles\\SampleTest.java"));
+			FileWriter myWriter = new FileWriter(
+					"C:\\Users\\Santosh\\Desktop\\compGen\\javaAuto\\opFiles\\" + newClass);
+			while ((sCurrentLine = br.readLine()) != null) {
+				if (sCurrentLine.contains("Sample")) {
+					sCurrentLine = sCurrentLine.replace("Sample", getComponentTitle());
+				}
+				if (sCurrentLine.contains("propertiesPlaceHolder")) {
+					System.out.println("adding the props");
+					sCurrentLine = sCurrentLine.replace("propertiesPlaceHolder", valGenerator);
+				}
+				myWriter.write(sCurrentLine + "\n");
+			}
+			myWriter.close();
+			System.out.println("Successfully wrote to the file.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+
+	}
+
+	private static void createImplClass() {
+		BufferedReader br = null;
+		String valGenString = " 	@ValueMapValue\r\n	@Setter(AccessLevel.NONE)\r\n	private String ";
+		String semiColonStr = "; \r\n\n";
+		String interfaceClass = getComponentTitle();
+		String compType = "molecules";
+		String newClass = interfaceClass + "Impl.java";
+		String valGenerator = "";
+		for (int i = 0; i < propsArray.size(); i++) {
+			valGenerator = valGenerator + valGenString + propsArray.get(i) + semiColonStr;
+		}
+		try {
+			String sCurrentLine;
+			br = new BufferedReader(
+					new FileReader("C:\\Users\\Santosh\\Desktop\\compGen\\javaAuto\\ipFiles\\SampleImpl.java"));
+			FileWriter myWriter = new FileWriter(
+					"C:\\Users\\Santosh\\Desktop\\compGen\\javaAuto\\opFiles\\" + newClass);
+			while ((sCurrentLine = br.readLine()) != null) {
+				if (sCurrentLine.contains("Sample")) {
+					sCurrentLine = sCurrentLine.replace("Sample", interfaceClass);
+				}
+				if (sCurrentLine.contains("ComponentFullPath")) {
+					sCurrentLine = sCurrentLine.replace("ComponentFullPath", "abbott-platform/components/content/"
+							+ compType + "/" + componentName + "/v1/" + componentName);
+				}
+				if (sCurrentLine.contains("propertiesPlaceHolder")) {
+					System.out.println("adding the props");
+					sCurrentLine = sCurrentLine.replace("propertiesPlaceHolder", valGenerator);
+				}
+				myWriter.write(sCurrentLine + "\n");
+			}
+			myWriter.close();
+			System.out.println("Successfully wrote to the file.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	private static String getComponentTitle() {
+		String compTitle = null;
+		String firstLetter = componentName.substring(0, 1);
+		String remainingLetters = componentName.substring(1, componentName.length());
+		firstLetter = firstLetter.toUpperCase();
+		compTitle = firstLetter + remainingLetters;
+		return compTitle;
 	}
 
 	private static void createDialogNode(Node tempNode)
@@ -75,14 +178,13 @@ public class CQConnectTestTACompGen {
 		setValues("sling:resourceType", tempNode, "granite/ui/components/coral/foundation/container");
 		tempNode = createNode("items", tempNode);
 		createDialogProps(tempNode);
-
 	}
 
 	private static void createDialogProps(Node tempNode)
 			throws FileNotFoundException, IOException, org.json.simple.parser.ParseException, ValueFormatException,
 			VersionException, LockException, ConstraintViolationException, RepositoryException {
-		Object obj = new JSONParser().parse(new FileReader("C:\\Users\\Santosh\\Desktop\\compGen\\compProps.json"));
-
+		Object obj = new JSONParser()
+				.parse(new FileReader("C:\\Users\\Santosh\\Desktop\\compGen\\aemAuto\\ipFiles\\compProps.json"));
 		JSONObject jo = (JSONObject) obj;
 		JSONArray ja = (JSONArray) jo.get("properties");
 		Iterator itr2 = ja.iterator();
@@ -103,7 +205,7 @@ public class CQConnectTestTACompGen {
 							Iterator<Map.Entry> itr4 = ((Map) itr3.next()).entrySet().iterator();
 							while (itr4.hasNext()) {
 								Map.Entry pair1 = itr4.next();
-								System.out.println(" pair1.getKey() is " + pair1.getKey());
+								System.out.println("pair1.getKey() is " + pair1.getKey());
 								if (pair1.getKey().toString().equalsIgnoreCase("nodeName")) {
 									temp1 = createNode((String) pair1.getValue(), itemsNode);
 								} else {
@@ -112,6 +214,9 @@ public class CQConnectTestTACompGen {
 							}
 						}
 					} else {
+						if (pair.getKey().toString().equalsIgnoreCase("name")) {
+							propsArray.add(pair.getValue().toString().replace("./", ""));
+						}
 						setValues((String) pair.getKey(), propNode, (String) pair.getValue());
 					}
 				}
@@ -124,7 +229,7 @@ public class CQConnectTestTACompGen {
 			ConstraintViolationException, RepositoryException {
 		node = node.addNode(attr, "nt:unstructured");
 		node.getSession().save();
-		System.out.println("Creating the node11 " + attr);
+		System.out.println("Creating the node " + attr);
 		return node;
 
 	}
@@ -143,20 +248,6 @@ public class CQConnectTestTACompGen {
 		System.out.println("setting the " + attr + " as :" + value);
 	}
 
-	public static void getValue(String attr, Node node) throws ValueFormatException, VersionException, LockException,
-			ConstraintViolationException, RepositoryException {
-		Property prop = node.getProperty(attr);
-		if (prop.isMultiple()) {
-			Value[] currentValues = prop.getValues();
-			for (int i = 0; i < currentValues.length; i++) {
-				System.out.println("tag " + i + "is :" + currentValues[i].getString());
-			}
-		} else {
-			String property = prop.getValue().getString();
-			System.out.println(attr + " is :" + property);
-		}
-	}
-
 	public static Session getSession(String repoUrl, String userName, char[] password) {
 		Session session = null;
 		try {
@@ -170,16 +261,4 @@ public class CQConnectTestTACompGen {
 		return session;
 
 	}
-
-	public static ReverseListIterator getReversalArrayList(VersionIterator vIterator) {
-		ArrayList<Version> list = new ArrayList<Version>();
-		while (vIterator.hasNext()) {
-			Version version = vIterator.nextVersion();
-			list.add(version);
-
-		}
-		ReverseListIterator reverseListIterator = new ReverseListIterator(list);
-		return reverseListIterator;
-	}
-
 }
