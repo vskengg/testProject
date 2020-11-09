@@ -54,12 +54,54 @@ public class CQConnectTestTACompGen {
 				setValues("sling:resourceType", tempNode, "cq/gui/components/authoring/dialog");
 				createDialogNode(tempNode);
 				createImplClass();
+				createInterface();
 				createImplTestClass();
 				session.save();
 			}
 		} catch (Exception e) {
 			System.err.println("Exception is : " + e);
 		}
+	}
+
+	private static void createInterface() {
+		BufferedReader br = null;
+		String semiColonStr = "; \r\n\n";
+		String interfaceClass = getComponentTitle() + ".java";
+		String valGenString = "	default String getProperty() { \r\n 		throw new UnsupportedOperationException(); \r\n	}";
+		String valGenerator = "";
+		for (int i = 0; i < propsArray.size(); i++) {
+			valGenerator = valGenerator + valGenString.replace("Property", getPropertyTitle(propsArray.get(i)))
+					+ semiColonStr;
+		}
+		try {
+			String sCurrentLine;
+			br = new BufferedReader(
+					new FileReader("C:\\Users\\Santosh\\Desktop\\compGen\\javaAuto\\ipFiles\\Sample.java"));
+			FileWriter myWriter = new FileWriter(
+					"C:\\Users\\Santosh\\Desktop\\compGen\\javaAuto\\opFiles\\" + interfaceClass);
+			while ((sCurrentLine = br.readLine()) != null) {
+				if (sCurrentLine.contains("Sample")) {
+					sCurrentLine = sCurrentLine.replace("Sample", getComponentTitle());
+				}
+				if (sCurrentLine.contains("methodsPlaceHolder")) {
+					System.out.println("adding the props");
+					sCurrentLine = sCurrentLine.replace("methodsPlaceHolder", valGenerator);
+				}
+				myWriter.write(sCurrentLine + "\n");
+			}
+			myWriter.close();
+			System.out.println("Successfully wrote to the file.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+
 	}
 
 	private static void createImplTestClass() {
@@ -152,6 +194,15 @@ public class CQConnectTestTACompGen {
 		String compTitle = null;
 		String firstLetter = componentName.substring(0, 1);
 		String remainingLetters = componentName.substring(1, componentName.length());
+		firstLetter = firstLetter.toUpperCase();
+		compTitle = firstLetter + remainingLetters;
+		return compTitle;
+	}
+
+	private static String getPropertyTitle(String title) {
+		String compTitle = null;
+		String firstLetter = title.substring(0, 1);
+		String remainingLetters = title.substring(1, title.length());
 		firstLetter = firstLetter.toUpperCase();
 		compTitle = firstLetter + remainingLetters;
 		return compTitle;
