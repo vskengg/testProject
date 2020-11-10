@@ -10,20 +10,15 @@ import java.util.Map;
 
 import javax.jcr.Node;
 import javax.jcr.PathNotFoundException;
-import javax.jcr.Property;
 import javax.jcr.Repository;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import javax.jcr.SimpleCredentials;
-import javax.jcr.Value;
 import javax.jcr.ValueFormatException;
 import javax.jcr.lock.LockException;
 import javax.jcr.nodetype.ConstraintViolationException;
-import javax.jcr.version.Version;
 import javax.jcr.version.VersionException;
-import javax.jcr.version.VersionIterator;
 
-import org.apache.commons.collections.iterators.ReverseListIterator;
 import org.apache.jackrabbit.commons.JcrUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -32,18 +27,18 @@ import org.json.simple.parser.JSONParser;
 public class CQConnectTestTACompGen {
 
 	public static ArrayList<String> propsArray = new ArrayList<String>();
-	public static String componentName = "indicators";
+	public static String componentName = "banner";
 
 	public static void main(String[] args) throws ParseException, IOException, PathNotFoundException,
 			RepositoryException, org.json.simple.parser.ParseException {
 		try {
-
-			Session session = getSession("http://192.168.0.5:4502/crx/server", "admin", "admin".toCharArray());
-			Node atomsNode = session.getNode("/apps/abbott-platform/components/autoComponents/atoms");
+			Session session = getSession("http://192.168.0.3:4502/crx/server", "admin", "admin".toCharArray());
+			Node atomsNode = session.getNode("/apps/autoComponents");
 			Node compNode;
 			if (atomsNode.hasNode(componentName)) {
 				atomsNode.getNode(componentName).remove();
 				session.save();
+			} else {
 				compNode = atomsNode.addNode(componentName, "sling:Folder").addNode("v1", "nt:unstructured")
 						.addNode(componentName, "cq:Component");
 				session.save();
@@ -67,10 +62,12 @@ public class CQConnectTestTACompGen {
 		BufferedReader br = null;
 		String semiColonStr = "; \r\n\n";
 		String interfaceClass = getComponentTitle() + ".java";
-		String valGenString = "	default String getProperty() { \r\n 		throw new UnsupportedOperationException(); \r\n	}";
 		String valGenerator = "";
 		for (int i = 0; i < propsArray.size(); i++) {
-			valGenerator = valGenerator + valGenString.replace("Property", getPropertyTitle(propsArray.get(i)))
+			String valGenString = "	default dataTypePlaceHolder getProperty() { \r\n 		throw new UnsupportedOperationException(); \r\n	}";
+			valGenString = valGenString.replace("dataTypePlaceHolder", getDataType(propsArray.get(i)));
+			valGenerator = valGenerator
+					+ valGenString.replace("Property", getPropertyTitle(getPropNameFromArray(propsArray.get(i))))
 					+ semiColonStr;
 		}
 		try {
@@ -101,19 +98,30 @@ public class CQConnectTestTACompGen {
 				ex.printStackTrace();
 			}
 		}
-
 	}
 
 	private static void createImplTestClass() {
 		BufferedReader br = null;
-		String valGenString = " 	@ValueMapValue\r\n	@Setter(AccessLevel.NONE)\r\n	private String ";
-		String semiColonStr = "; \r\n\n";
+		String valGenString = "";
+
+		for (int i = 0; i < propsArray.size(); i++) {
+			valGenString = valGenString + "	@Test\r\n" + "	void testGet"
+					+ getPropertyTitle(getPropNameFromArray(propsArray.get(i))) + "() {\r\n"
+					+ "		ctx.currentResource(" + getComponentTitle() + "ImplTest.PATH);\r\n" + "		Indicators "
+					+ componentName + " = ctx.request().adaptTo(" + getComponentTitle() + ".class);\r\n"
+					+ "		assertEquals(" + componentName + ".get"
+					+ getPropertyTitle(getPropNameFromArray(propsArray.get(i))) + "(), \"testValuePlaceHolder\");\r\n"
+					+ "	} \r\n\n";
+			if (getDataType(propsArray.get(i)).equalsIgnoreCase("String")) {
+				valGenString = valGenString.replace("testValuePlaceHolder",
+						"Test " + getPropertyTitle(getPropNameFromArray(propsArray.get(i))));
+			} else if (getDataType(propsArray.get(i)).equalsIgnoreCase("Integer")) {
+				valGenString = valGenString.replace("\"testValuePlaceHolder\"", "4");
+			}
+
+		}
 		String interfaceClass = getComponentTitle();
 		String newClass = interfaceClass + "ImplTest.java";
-		String valGenerator = "";
-		for (int i = 0; i < propsArray.size(); i++) {
-			valGenerator = valGenerator + valGenString + propsArray.get(i) + semiColonStr;
-		}
 		try {
 			String sCurrentLine;
 			br = new BufferedReader(
@@ -124,9 +132,12 @@ public class CQConnectTestTACompGen {
 				if (sCurrentLine.contains("Sample")) {
 					sCurrentLine = sCurrentLine.replace("Sample", getComponentTitle());
 				}
-				if (sCurrentLine.contains("propertiesPlaceHolder")) {
+				if (sCurrentLine.contains("sample")) {
+					sCurrentLine = sCurrentLine.replace("sample", componentName);
+				}
+				if (sCurrentLine.contains("testClassMethods")) {
 					System.out.println("adding the props");
-					sCurrentLine = sCurrentLine.replace("propertiesPlaceHolder", valGenerator);
+					sCurrentLine = sCurrentLine.replace("testClassMethods", valGenString);
 				}
 				myWriter.write(sCurrentLine + "\n");
 			}
@@ -147,14 +158,15 @@ public class CQConnectTestTACompGen {
 
 	private static void createImplClass() {
 		BufferedReader br = null;
-		String valGenString = " 	@ValueMapValue\r\n	@Setter(AccessLevel.NONE)\r\n	private String ";
 		String semiColonStr = "; \r\n\n";
 		String interfaceClass = getComponentTitle();
 		String compType = "molecules";
 		String newClass = interfaceClass + "Impl.java";
 		String valGenerator = "";
 		for (int i = 0; i < propsArray.size(); i++) {
-			valGenerator = valGenerator + valGenString + propsArray.get(i) + semiColonStr;
+			String valGenString = " 	@ValueMapValue\r\n	@Setter(AccessLevel.NONE)\r\n	private dataTypePlaceHolder ";
+			valGenString = valGenString.replace("dataTypePlaceHolder", getDataType(propsArray.get(i)));
+			valGenerator = valGenerator + valGenString + getPropNameFromArray(propsArray.get(i)) + semiColonStr;
 		}
 		try {
 			String sCurrentLine;
@@ -188,6 +200,14 @@ public class CQConnectTestTACompGen {
 				ex.printStackTrace();
 			}
 		}
+	}
+
+	private static String getDataType(String str) {
+		return str.substring(0, str.indexOf(":"));
+	}
+
+	private static String getPropNameFromArray(String str) {
+		return str.substring(str.indexOf(":") + 1);
 	}
 
 	private static String getComponentTitle() {
@@ -242,8 +262,12 @@ public class CQConnectTestTACompGen {
 		while (itr2.hasNext()) {
 			Iterator<Map.Entry> itr1 = ((Map) itr2.next()).entrySet().iterator();
 			Node propNode = null;
+			String dataType = null;
 			while (itr1.hasNext()) {
 				Map.Entry pair = itr1.next();
+				if (pair.getKey().toString().equalsIgnoreCase("datatype")) {
+					dataType = (String) pair.getValue();
+				}
 				if (pair.getKey().toString().equalsIgnoreCase("nodeName")) {
 					propNode = createNode((String) pair.getValue(), tempNode);
 				} else {
@@ -266,7 +290,7 @@ public class CQConnectTestTACompGen {
 						}
 					} else {
 						if (pair.getKey().toString().equalsIgnoreCase("name")) {
-							propsArray.add(pair.getValue().toString().replace("./", ""));
+							propsArray.add(dataType + ":" + pair.getValue().toString().replace("./", ""));
 						}
 						setValues((String) pair.getKey(), propNode, (String) pair.getValue());
 					}
@@ -293,6 +317,13 @@ public class CQConnectTestTACompGen {
 	}
 
 	public static void setValues(String attr, Node node, String value) throws ValueFormatException, VersionException,
+			LockException, ConstraintViolationException, RepositoryException {
+		node.setProperty(attr, value);
+		node.getSession().save();
+		System.out.println("setting the " + attr + " as :" + value);
+	}
+
+	public static void setValues(String attr, Node node, Integer value) throws ValueFormatException, VersionException,
 			LockException, ConstraintViolationException, RepositoryException {
 		node.setProperty(attr, value);
 		node.getSession().save();
