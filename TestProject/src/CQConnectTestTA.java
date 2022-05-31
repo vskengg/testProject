@@ -53,7 +53,7 @@ public class CQConnectTestTA {
 		try {
 			while (nI.hasNext()) {
 				currentNode = nI.nextNode();
-				System.out.println(currentNode.getPath() + " super type is :"
+				System.out.println(currentNode.getPath() + " super type is :::"
 						+ currentNode.getProperty("jcr:title").getValue().getString());
 			}
 		} catch (Exception e) {
@@ -68,7 +68,7 @@ public class CQConnectTestTA {
 		while (nI.hasNext()) {
 			Node currentNode = nI.nextNode();
 			if (currentNode.hasProperty("sling:resourceSuperType")) {
-				System.out.println(currentNode.getPath() + " super type is :"
+				System.out.println(currentNode.getPath() + " super type is :::"
 						+ currentNode.getProperty("sling:resourceSuperType").getValue().getString());
 			}
 
