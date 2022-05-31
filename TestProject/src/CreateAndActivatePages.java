@@ -33,7 +33,7 @@ public class CreateAndActivatePages {
 				if(tempNode.hasNode("jcr:content"))
 					tempNode = tempNode.getNode("jcr:content");
 				if(tempNode.hasProperty(mA)){
-					//System.out.println("node name having MA "+i+" is :"+tempNode.getPath());
+					//System.out.println("node name having MA "+i+" is :::"+tempNode.getPath());
 					//System.out.println("markedForActivation is : "+tempNode.getProperty(mA).getValue().getString());
 					System.out.println("removing the proper for the path "+tempNode.getPath());
 					tempNode.getProperty(mA).remove();
